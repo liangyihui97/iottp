@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>可排序的表格组件</title>
+    <link rel="stylesheet" type="text/css" href="/css/main.css">
+</head>
+<body>
+<div id="app" >
+<v-table :columns="columns" :data="data"></v-table>
+    <button @click="handleAddData">添加数据</button>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script>
+    Vue.component('v-table',{
+        props:{
+            columns: {
+                style: Array,
+                default: function () {
+                    return [];
+                }
+            },
+            data:{
+                style: Array,
+                default: function () {
+                    return [];
+                }
+            }
+        },
+        data: function () {
+            return{
+                currentColumns: [],
+                currentData: []
+            }
+        },
+        render: function (h) {
+            var _this = this;
+            var ths = [];
+            /*thead部分*/
+            this.currentColumns.forEach(function (col, index) {
+               if(col.sortable){
+                   ths.push(h('th',[
+                       h('span',col.title),
+                       //升序
+                       h('a',{
+                           class: {
+                               on: col._sortType==='asc'
+                           },
+                           on: {
+                               click: function () {
+                                   _this.handleSortByAsc(index)
+                               }
+                           }
+                       },'↑ '),
+                       //降序
+                       h('a',{
+                           class: {
+                               on: col._sortType==='desc'
+                           },
+                           on: {
+                               click: function () {
+                                   _this.handleSortByDesc(index)
+                               }
+                           }
+                       },'↓')
+                   ]))
+               }else {
+                   ths.push(h('th', col.title))
+               }
+            });
+            var trs = [];
+            /*tbody部分*/
+            this.currentData.forEach(function (row) {/*遍历每一个currentData中的每一个内容*/
+                var tds = [];
+                _this.currentColumns.forEach(function (cell) {/*一行的内容*/
+                    tds.push(h('td',row[cell.key]));
+                });
+                trs.push(h('tr',tds));
+            });
+            return h('table',[
+                h('thead',[
+                    h('tr',ths)
+            ]),
+            h('tbody',trs)
+            ])
+        },
+        methods: {
+            makeColumns: function () {
+		console.log(this.columns);
+                this.currentColumns = this.columns.map(function (col, index) {
+                    col._sortType = 'normal';
+                    col._index = index;
+                    return col;
+                });
+            },
+            makeData: function () {
+		console.log(this.data);
+                this.currentData = this.data.map(function (row, index) {
+                    row._index = index;
+                    return row;
+                });
+            },
+            handleSortByAsc: function (index) {
+                var key = this.currentColumns[index].key;//获取要排序的列名
+                //console.log(key);
+                this.currentColumns.forEach(function (col) {
+                    col._sortType = 'normal';
+                });
+                this.currentColumns[index]._sortType = 'asc';
+                this.currentData.sort(function (a, b) {
+                    return a[key] > b[key] ? 1 : -1;//若a>b，则a在b后面，-1不变位置，1变位置
+                })
+            },
+            handleSortByDesc: function (index) {
+                var key = this.currentColumns[index].key;
+                this.currentColumns.forEach(function (col) {
+                    col._sortType = 'normal';
+                });
+                this.currentColumns[index]._sortType = 'desc';
+                this.currentData.sort(function (a, b) {
+                    return a[key] < b[key] ? 1 : -1;
+                })
+            }
+        },
+        watch: {
+            data: function () {
+                this.makeData();
+                var sortedColumn = this.currentColumns.filter(function (col) {
+                    return col._sortType !== 'normal';
+                });
+                if (sortedColumn.length > 0) {
+                    if (sortedColumn[0]._sortType === 'asc') {
+                        this.handleSortByAsc(sortedColumn[0]._index);
+                    } else {
+                        this.handleSortByDesc(sortedColumn[0]._index);
+                    }
+                }
+            },
+	    columns: function(){
+		this.makeColumns();
+}
+            },
+    mounted () {
+        this.makeColumns();
+        this.makeData();
+        }
+    });
+    var app = new Vue({
+        el: '#app',
+        data() {return{
+		    columns: [],
+		    data: []}
+		       
+ },
+        methods : {
+            handleAddData: function () {
+                this.data.push({
+                    name: '刘小天',
+                    age: 19,
+                    birthday: '1998-05-30',
+                    address: '北京市东城区东直门'
+                });
+            },
+        },
+        mounted (){
+var self = this;
+    axios
+.get('http://192.168.227.10:3000/api/data')
+.then(function(response){
+self.data = response.data.data;
+self.columns = response.data.columns;
+});
+}
+    });
+</script>
+</body>
+</html>
+
